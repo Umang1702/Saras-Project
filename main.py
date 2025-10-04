@@ -95,7 +95,7 @@ def processCommand(c):
 if __name__ == "__main__":
     speak("Initializing Saras....")
     while True:
-        # Listen for the wake word "Jarvis"
+        # Listen for the wake word "Saras"
         # obtain audio from the microphone
         r = sr.Recognizer()
          
@@ -118,5 +118,6 @@ if __name__ == "__main__":
 
         except Exception as e:
             print("Error; {0}".format(e))
+
 
 
