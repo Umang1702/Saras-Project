@@ -1,0 +1,67 @@
+"""Launch an application by name, resolving common editors/apps to real executables."""
+from __future__ import annotations
+
+import shutil
+import subprocess
+import time
+
+from pydantic import Field
+
+from security.policies import PermissionLevel
+from tools.base import Tool, ToolInput, ToolResult
+
+# Common aliases -> actual executable names to try, in order.
+_APP_ALIASES: dict[str, list[str]] = {
+    "vs code": ["code"], "vscode": ["code"], "visual studio code": ["code"],
+    "chrome": ["chrome", "google-chrome"], "google chrome": ["chrome", "google-chrome"],
+    "firefox": ["firefox"],
+    "notepad": ["notepad"],
+    "terminal": ["wt", "cmd"],
+    "explorer": ["explorer"],
+    "word": ["winword"], "excel": ["excel"], "powerpoint": ["powerpnt"],
+    "spotify": ["spotify"],
+}
+
+
+class LaunchApplicationInput(ToolInput):
+    application_name: str = Field(description="Name of the application to launch, e.g. 'VS Code', 'Chrome'.")
+    arguments: list[str] = Field(default_factory=list, description="Optional command-line arguments, e.g. a file/folder path to open.")
+
+
+class LaunchApplicationTool(Tool):
+    name = "open_application"
+    description = "Launch a desktop application by name, optionally with arguments (e.g. a path to open)."
+    permission_level = PermissionLevel.LOW_RISK
+    input_model = LaunchApplicationInput
+
+    def run(self, params: LaunchApplicationInput) -> ToolResult:
+        key = params.application_name.strip().lower()
+        candidates = _APP_ALIASES.get(key, [key])
+
+        resolved = next((c for c in candidates if shutil.which(c)), None)
+        if resolved is None:
+            return ToolResult(
+                success=False,
+                message=f"I couldn't find '{params.application_name}' installed or on PATH.",
+                error="app_not_found",
+            )
+
+        try:
+            subprocess.Popen([resolved, *params.arguments])
+        except Exception as exc:
+            return ToolResult(success=False, message=f"Failed to launch {params.application_name}.", error=str(exc))
+
+        self._last_launch = resolved
+        return ToolResult(success=True, message=f"Opening {params.application_name}.", data={"executable": resolved})
+
+    def verify(self, params: LaunchApplicationInput, result: ToolResult) -> str | None:
+        if not result.success:
+            return None
+        # Give the process a brief moment to appear, then check it's running.
+        import psutil
+        exe = (result.data or {}).get("executable", "")
+        time.sleep(1.0)
+        running = any(exe.lower() in (p.name() or "").lower() for p in psutil.process_iter(["name"]))
+        if not running:
+            return f"{params.application_name} was launched but no matching process was found running."
+        return None

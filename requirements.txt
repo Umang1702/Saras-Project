@@ -1,0 +1,33 @@
+# Core
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+
+# AI
+openai>=1.30
+
+# Voice
+SpeechRecognition>=3.10
+pyttsx3>=2.90
+gTTS>=2.5
+pygame>=2.5
+PyAudio>=0.2.14   # required by SpeechRecognition's Microphone() on Windows
+
+# System / Windows tools
+psutil>=5.9
+mss>=9.0
+pycaw>=20240210; sys_platform == "win32"
+comtypes>=1.2; sys_platform == "win32"
+
+# UI
+customtkinter>=6.0.0
+
+# News / HTTP
+requests>=2.31
+
+# Scheduler
+APScheduler>=3.10
+SQLAlchemy>=2.0    # backs APScheduler's SQLAlchemyJobStore
+
+# Testing
+pytest>=8.0
